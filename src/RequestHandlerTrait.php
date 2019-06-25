@@ -26,35 +26,27 @@ declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler;
 
-use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Represent a collection of MiddlewareInterface instances.
- * The collection can implement the method for processing data of its choice: LIFO, FIFO...
- *
- * @codeCoverageIgnore
- */
-interface MiddlewareCollectionInterface
+trait RequestHandlerTrait
 {
-    /**
-     * Must return true if there is no middleware in the collection to process.
-     * @return bool
-     */
-    public function isEmpty(): bool;
+    private static function createRequestHandlerFromCallable(callable $callable): RequestHandlerInterface
+    {
+        return new class($callable) implements RequestHandlerInterface
+        {
+            private $callable;
 
-    /**
-     * Must return the next middleware to process in the collection.
-     * Depending on the implemented strategy, the middleware MAY not be removed from the collection.
-     * @return MiddlewareInterface
-     */
-    public function next(): MiddlewareInterface;
+            public function __construct(callable $callable)
+            {
+                $this->callable = $callable;
+            }
 
-    /**
-     * Add a middleware instance of MiddlewareInterface to the collection.
-     *
-     * @param MiddlewareInterface $middleware
-     *
-     * @return MiddlewareCollectionInterface
-     */
-    public function add(MiddlewareInterface $middleware): MiddlewareCollectionInterface;
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return call_user_func($this->callable, $request);
+            }
+        };
+    }
 }

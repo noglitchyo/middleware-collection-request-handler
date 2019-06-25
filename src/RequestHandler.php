@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * MIT License
  *
@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler;
 
@@ -31,6 +32,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class RequestHandler implements RequestHandlerInterface
 {
+    use RequestHandlerTrait;
+
     /**
      * @var MiddlewareCollectionInterface
      */
@@ -71,23 +74,5 @@ class RequestHandler implements RequestHandlerInterface
         $nextMiddleware = $this->middlewareCollection->next();
 
         return $nextMiddleware->process($request, $this);
-    }
-
-    private static function createRequestHandlerFromCallable(callable $callable): RequestHandlerInterface
-    {
-        return new class($callable) implements RequestHandlerInterface
-        {
-            private $callable;
-
-            public function __construct(callable $callable)
-            {
-                $this->callable = $callable;
-            }
-
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
-                return call_user_func($this->callable, $request);
-            }
-        };
     }
 }

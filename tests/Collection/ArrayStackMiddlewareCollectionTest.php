@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * MIT License
  *
@@ -22,14 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\Collection;
 
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Exception\EmptyMiddlewareCollectionException;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\GetMiddlewareTrait;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\ArrayStackMiddlewareCollection;
+use Nyholm\Psr7\Response;
+use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * @covers \NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\ArrayStackMiddlewareCollection
@@ -52,7 +57,7 @@ class ArrayStackMiddlewareCollectionTest extends TestCase
     {
         $middlewareCollection = new ArrayStackMiddlewareCollection(
             [
-                self::getMiddleware()
+                self::getMiddleware(),
             ]
         );
 
@@ -108,5 +113,41 @@ class ArrayStackMiddlewareCollectionTest extends TestCase
         $middlewareCollection->add($middleware2);
 
         $this->assertSame($middleware2, $middlewareCollection->next());
+    }
+
+    public function testAddFromCallableCreateMiddlewareAndAddItToCollection()
+    {
+        $middlewareCollection = new ArrayStackMiddlewareCollection();
+
+        $middlewareCollection->addFromCallable(
+            function (ServerRequestInterface $serverRequest, RequestHandlerInterface $requestHandler) {
+                $this->assertTrue(true);
+                return $requestHandler->handle($serverRequest);
+            }
+        );
+
+        $this->assertFalse($middlewareCollection->isEmpty());
+
+        return $middlewareCollection;
+    }
+
+    /**
+     * @depends testAddFromCallableCreateMiddlewareAndAddItToCollection
+     */
+    public function testAddedMiddlewareCreatedFromCallableIsCallAndReturnResponse(
+        ArrayStackMiddlewareCollection $middlewareCollection
+    ) {
+        $response = new Response();
+
+        $requestHandlerMock = $this->createMock(RequestHandlerInterface::class);
+        $requestHandlerMock->expects($this->once())->method('handle')->willReturn($response);
+
+        $this->assertSame(
+            $response,
+            $middlewareCollection->next()->process(
+                new ServerRequest('GET', '/uri'),
+                $requestHandlerMock
+            )
+        );
     }
 }

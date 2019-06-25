@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * MIT License
  *
@@ -22,14 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\Collection;
 
+use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\ArrayStackMiddlewareCollection;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Exception\EmptyMiddlewareCollectionException;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\GetMiddlewareTrait;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\SplQueueMiddlewareCollection;
+use Nyholm\Psr7\Response;
+use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * @covers \NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\SplQueueMiddlewareCollection
@@ -52,7 +58,7 @@ class SplQueueMiddlewareCollectionTest extends TestCase
     {
         $middlewareCollection = new SplQueueMiddlewareCollection(
             [
-                self::getMiddleware()
+                self::getMiddleware(),
             ]
         );
 
@@ -90,8 +96,9 @@ class SplQueueMiddlewareCollectionTest extends TestCase
     /**
      * @depends testAdd
      */
-    public function testNextRemoveMiddlewareFromCollectionAndReturnMiddleware(SplQueueMiddlewareCollection $middlewareCollection)
-    {
+    public function testNextRemoveMiddlewareFromCollectionAndReturnMiddleware(
+        SplQueueMiddlewareCollection $middlewareCollection
+    ) {
         $this->assertEquals($this->middleware, $middlewareCollection->next());
         $this->assertTrue($middlewareCollection->isEmpty());
     }
@@ -102,10 +109,46 @@ class SplQueueMiddlewareCollectionTest extends TestCase
 
         $middleware1 = self::getMiddleware();
         $middleware2 = self::getMiddleware();
-        
+
         $middlewareCollection->add($middleware1);
         $middlewareCollection->add($middleware2);
 
         $this->assertSame($middleware1, $middlewareCollection->next());
+    }
+
+    public function testAddFromCallableCreateMiddlewareAndAddItToCollection()
+    {
+        $middlewareCollection = new SplQueueMiddlewareCollection();
+
+        $middlewareCollection->addFromCallable(
+            function (ServerRequestInterface $serverRequest, RequestHandlerInterface $requestHandler) {
+                $this->assertTrue(true);
+                return $requestHandler->handle($serverRequest);
+            }
+        );
+
+        $this->assertFalse($middlewareCollection->isEmpty());
+
+        return $middlewareCollection;
+    }
+
+    /**
+     * @depends testAddFromCallableCreateMiddlewareAndAddItToCollection
+     */
+    public function testAddedMiddlewareCreatedFromCallableIsCallAndReturnResponse(
+        SplQueueMiddlewareCollection $middlewareCollection
+    ) {
+        $response = new Response();
+
+        $requestHandlerMock = $this->createMock(RequestHandlerInterface::class);
+        $requestHandlerMock->expects($this->once())->method('handle')->willReturn($response);
+
+        $this->assertSame(
+            $response,
+            $middlewareCollection->next()->process(
+                new ServerRequest('GET', '/uri'),
+                $requestHandlerMock
+            )
+        );
     }
 }

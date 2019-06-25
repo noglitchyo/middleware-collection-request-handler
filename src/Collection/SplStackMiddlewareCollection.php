@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * MIT License
  *
@@ -22,17 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler\Collection;
 
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Exception\EmptyMiddlewareCollectionException;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\MiddlewareCollectionInterface;
+use NoGlitchYo\MiddlewareCollectionRequestHandler\MiddlewareCollectionTrait;
 use Psr\Http\Server\MiddlewareInterface;
 use RuntimeException;
 use SplStack;
 
 class SplStackMiddlewareCollection implements MiddlewareCollectionInterface
 {
+    use MiddlewareCollectionTrait;
+
     /**
      * @var SplStack
      */
@@ -72,5 +76,12 @@ class SplStackMiddlewareCollection implements MiddlewareCollectionInterface
         } catch (RuntimeException $e) {
             throw new EmptyMiddlewareCollectionException();
         }
+    }
+
+    public function addFromCallable(callable $callable): MiddlewareCollectionInterface
+    {
+        $this->add(self::createFromCallable($callable));
+
+        return $this;
     }
 }
