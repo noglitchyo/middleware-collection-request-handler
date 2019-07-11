@@ -13,6 +13,10 @@
         "phpstan/phpstan": "^0.11.8",
         "nyholm/psr7": "^1.1"
     },
+    "provide": {
+        "psr/http-server-handler-implementation": "1.0",
+        "psr/http-server-middleware-implementation": "1.0"
+    },
     "license": "MIT",
     "authors": [
         {

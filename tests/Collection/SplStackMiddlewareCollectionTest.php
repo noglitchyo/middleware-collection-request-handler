@@ -26,8 +26,6 @@ declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\Collection;
 
-use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\ArrayStackMiddlewareCollection;
-use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\SplQueueMiddlewareCollection;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Collection\SplStackMiddlewareCollection;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Exception\EmptyMiddlewareCollectionException;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\Tests\GetMiddlewareTrait;
