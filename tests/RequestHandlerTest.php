@@ -25,6 +25,7 @@
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler\Tests;
 
+use LogicException;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\MiddlewareCollectionInterface;
 use NoGlitchYo\MiddlewareCollectionRequestHandler\RequestHandler;
 use Nyholm\Psr7\Response;
@@ -59,15 +60,15 @@ class RequestHandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->requestHandlerMock = $this->createMock(RequestHandlerInterface::class);
+        $this->requestHandlerMock       = $this->createMock(RequestHandlerInterface::class);
         $this->middlewareCollectionMock = $this->createMock(MiddlewareCollectionInterface::class);
 
-        $this->sut = new RequestHandler($this->requestHandlerMock, $this->middlewareCollectionMock);
+        $this->sut = new RequestHandler($this->middlewareCollectionMock, $this->requestHandlerMock);
     }
 
     public function testHandleDelegateToDefaultHandlerIfNoMiddleware()
     {
-        $request = new ServerRequest('GET', '/test');
+        $request  = new ServerRequest('GET', '/test');
         $response = new Response(404);
 
         $this->middlewareCollectionMock->method('isEmpty')
@@ -87,7 +88,7 @@ class RequestHandlerTest extends TestCase
 
     public function testIsCallable()
     {
-        $request = new ServerRequest('GET', '/test');
+        $request  = new ServerRequest('GET', '/test');
         $response = new Response(404);
 
         $this->middlewareCollectionMock->method('isEmpty')
@@ -136,15 +137,29 @@ class RequestHandlerTest extends TestCase
             ->method('next')
             ->willReturnOnConsecutiveCalls(
                 self::getMiddleware(false),
-                self::getMiddleware(true),
-                );
+                self::getMiddleware(true)
+            );
 
         $this->assertInstanceOf(ResponseInterface::class, $this->sut->handle($request));
     }
 
-    public function testFromCallableCreateDefaultRequestHandlerFromCallable()
+    public function testHandleThrowExceptionIfDefaultRequestHandlerIsNull()
     {
         $request = new ServerRequest('GET', '/test');
+
+        $this->middlewareCollectionMock = $this->createMock(MiddlewareCollectionInterface::class);
+
+        $sut = new RequestHandler($this->middlewareCollectionMock);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('A default request handler must be defined if RequestHandler is used as a RequestHandler.');
+
+        $sut->handle($request);
+    }
+
+    public function testFromCallableCreateDefaultRequestHandlerFromCallable()
+    {
+        $request  = new ServerRequest('GET', '/test');
         $response = new Response(405);
         $callable = function () use ($response) {
             return $response;
@@ -158,5 +173,58 @@ class RequestHandlerTest extends TestCase
         $this->assertSame($response, $sut->handle($request));
     }
 
+    public function testProcessCallNextMiddleware()
+    {
+        $request = new ServerRequest('GET', '/test');
 
+        $this->middlewareCollectionMock
+            ->expects($this->once())
+            ->method('isEmpty')
+            ->willReturn(false);
+
+        $this->middlewareCollectionMock
+            ->expects($this->once())
+            ->method('next')
+            ->willReturn(self::getMiddleware(true));
+
+        $handler = new class implements RequestHandlerInterface
+        {
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return new Response();
+            }
+        };
+
+        $this->assertInstanceOf(ResponseInterface::class, $this->sut->process($request, $handler));
+    }
+
+
+    public function testProcessReturnAndDelegateToHandlerIfNoMiddleware()
+    {
+        $request  = new ServerRequest('GET', '/test');
+        $response = new Response(404);
+
+        $this->middlewareCollectionMock->method('isEmpty')
+            ->willReturn(true);
+
+        $handler = new class($response) implements RequestHandlerInterface
+        {
+            /**
+             * @var ResponseInterface
+             */
+            private $response;
+
+            public function __construct(ResponseInterface $response)
+            {
+                $this->response = $response;
+            }
+
+            public function handle(ServerRequestInterface $request): ResponseInterface
+            {
+                return $this->response;
+            }
+        };
+
+        $this->assertSame($response, $this->sut->process($request, $handler));
+    }
 }

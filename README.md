@@ -10,10 +10,12 @@ Lightweight & dead simple PSR-15 Server Request Handler implementation to proces
 
 ### Description
 
-PSR-7 Request Handler implementing the [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php) 
-and able to manage a collection of Middlewares implementing the [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php).
+PSR-15 request handler implementing both [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php) and [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php)
+able to manage a collection of middlewares implementing the [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php).
 
-It comes with a set of middleware collections using different strategy on how to provide the middlewares to the RequestHandler, and also provide a dead simple collection interface to implement in a glimpse your own strategy.
+It can be used either as a RequestHandler or as a Middleware to fit into any implementation.
+
+Comes with a set of middleware collections using different strategy (LIFO, FIFO...) on how the middlewares from the collection are provided to the RequestHandler, and also provides a simple MiddlewareCollectionInterface to implement in a glimpse your own strategy.
 
 ### Goals
 
