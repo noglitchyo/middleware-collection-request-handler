@@ -10,10 +10,12 @@ Lightweight & dead simple PSR-15 Server Request Handler implementation to proces
 
 ### Description
 
-PSR-7 Request Handler implementing the [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php) 
-and able to manage a collection of Middlewares implementing the [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php).
+PSR-15 request handler implementing both [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php) and [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php)
+able to manage a collection of middlewares implementing the [MiddlewareInterface](https://github.com/php-fig/http-server-middleware/blob/master/src/MiddlewareInterface.php).
 
-It comes with a set of middleware collections using different strategy on how to provide the middlewares to the RequestHandler, and also provide a dead simple collection interface to implement in a glimpse your own strategy.
+It can be used either as a RequestHandler or as a Middleware to fit into any implementation.
+
+Comes with a set of middleware collections using different strategy (LIFO, FIFO...) on how the middlewares from the collection are provided to the RequestHandler, and also provides a simple MiddlewareCollectionInterface to implement in a glimpse your own strategy.
 
 ### Goals
 
@@ -32,23 +34,31 @@ It comes with a set of middleware collections using different strategy on how to
 
 #### Run
 
-Instantiate the RequestHandler class. It requires ony 2 arguments: 
+Create a new instance of the request handler class which can be use as a request handler or as a middleware.
 
-- ***`$defaultRequestHandler`*** : [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php)
+##### From the constructor 
 
-    ***The default request handler MUST provide a default response if none of the middlewares created one.***
-
-    Some examples of what could be a "default request handler":
-    - with the [ADR pattern](https://en.wikipedia.org/wiki/Action%E2%80%93domain%E2%80%93responder), the default request handler might be your action class.*
-    - with the [MVC pattern](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller), the default request handler might be the action method of your controller.
-
-    It is possible to directly provide a `callable` and use the factory method `RequestHandler::fromCallable(callable $callable)`. 
-    It will create an anonymous instance of RequestHandlerInterface wrapping the given `callable` inside.
+`RequestHandler::__construct(MiddlewareCollectionInterface $middlewareCollection, RequestHandlerInterface $defaultRequestHandler = null)`
 
 - ***`$middlewareCollection`*** : [MiddlewareCollectionInterface](https://github.com/noglitchyo/middleware-collection-request-handler/blob/master/src/MiddlewareCollectionInterface.php)
 
     Contains the middlewares and defines the strategy used to store the middlewares and to retrieve the next middleware.
     Some implementations with common strategies are provided: [stack (LIFO)](https://github.com/noglitchyo/middleware-collection-request-handler/blob/master/src/Collection/SplStackMiddlewareCollection.php), [queue (FIFO)](https://github.com/noglitchyo/middleware-collection-request-handler/blob/master/src/Collection/SplQueueMiddlewareCollection.php).
+
+- ***`$defaultRequestHandler = null`*** : [RequestHandlerInterface](https://github.com/php-fig/http-server-handler/blob/master/src/RequestHandlerInterface.php)
+
+    Provides a default response implementing [ResponseInterface](https://github.com/php-fig/http-message/blob/master/src/ResponseInterface.php) if none of the middlewares in the collection was able to create one.
+
+    Some examples of what could be a "default request handler":
+    - with the [ADR pattern](https://en.wikipedia.org/wiki/Action%E2%80%93domain%E2%80%93responder), the default request handler might be your action class.*
+    - with the [MVC pattern](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller), the default request handler might be the action method of your controller.
+
+##### From the factory method
+
+`RequestHandler::fromCallable(callable $callable, MiddlewareCollectionInterface $middlewareCollection)`
+ 
+It creates a RequestHandler instance by wrapping the given `callable` inside an anonymous instance of RequestHandlerInterface.
+The callable is the $defaultRequestHandler. **It MUST returns a response implementing [ResponseInterface](https://github.com/php-fig/http-message/blob/master/src/ResponseInterface.php).**
 
 ##### Example
 
@@ -86,6 +96,7 @@ $requestHandler = RequestHandler::fromCallable(
     $middlewareCollection
 );
 
+// As a RequestHandler:
 // Pass the request to the request handler which will dispatch the request to the middlewares.
 $response = $requestHandler->handle(/* ServerRequestInterface */); 
 

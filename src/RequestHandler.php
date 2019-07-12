@@ -26,11 +26,13 @@ declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler;
 
+use LogicException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-class RequestHandler implements RequestHandlerInterface
+class RequestHandler implements RequestHandlerInterface, MiddlewareInterface
 {
     use RequestHandlerTrait;
 
@@ -40,15 +42,15 @@ class RequestHandler implements RequestHandlerInterface
     private $middlewareCollection;
 
     /**
-     * @var RequestHandlerInterface
+     * @var RequestHandlerInterface|null
      */
     private $defaultRequestHandler;
 
     public function __construct(
-        RequestHandlerInterface $defaultRequestHandler,
-        MiddlewareCollectionInterface $middlewareCollection
+        MiddlewareCollectionInterface $middlewareCollection,
+        RequestHandlerInterface $defaultRequestHandler = null
     ) {
-        $this->middlewareCollection = $middlewareCollection;
+        $this->middlewareCollection  = $middlewareCollection;
         $this->defaultRequestHandler = $defaultRequestHandler;
     }
 
@@ -57,7 +59,7 @@ class RequestHandler implements RequestHandlerInterface
         MiddlewareCollectionInterface $middlewareCollection
     ): self {
         $defaultRequestHandler = static::createRequestHandlerFromCallable($callable);
-        return new static($defaultRequestHandler, $middlewareCollection);
+        return new static($middlewareCollection, $defaultRequestHandler);
     }
 
     public function __invoke(ServerRequestInterface $serverRequest): ResponseInterface
@@ -67,8 +69,25 @@ class RequestHandler implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        if ($this->defaultRequestHandler === null) {
+            throw new LogicException(
+                'A default request handler must be defined if RequestHandler is used as a RequestHandler.'
+            );
+        }
+
         if ($this->middlewareCollection->isEmpty()) {
             return $this->defaultRequestHandler->handle($request);
+        }
+
+        $nextMiddleware = $this->middlewareCollection->next();
+
+        return $nextMiddleware->process($request, $this);
+    }
+
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        if ($this->middlewareCollection->isEmpty()) {
+            return $handler->handle($request);
         }
 
         $nextMiddleware = $this->middlewareCollection->next();
