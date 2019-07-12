@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 namespace NoGlitchYo\MiddlewareCollectionRequestHandler;
 
+use NoGlitchYo\MiddlewareCollectionRequestHandler\Exception\EmptyMiddlewareCollectionException;
 use Psr\Http\Server\MiddlewareInterface;
 
 /**
@@ -43,8 +44,13 @@ interface MiddlewareCollectionInterface
     public function isEmpty(): bool;
 
     /**
-     * Must return the next middleware to process in the collection.
+     * MUST return the next middleware to process in the collection.
      * Depending on the implemented strategy, the middleware MAY not be removed from the collection.
+     *
+     * MUST throws EmptyMiddlewareCollectionException if there is not next middleware to return.
+     *
+     * @throws EmptyMiddlewareCollectionException
+     *
      * @return MiddlewareInterface
      */
     public function next(): MiddlewareInterface;
