@@ -86,6 +86,10 @@ class RequestHandler implements RequestHandlerInterface, MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        if (!isset($this->defaultRequestHandler)) {
+            $this->defaultRequestHandler = $handler;
+        }
+
         if ($this->middlewareCollection->isEmpty()) {
             return $handler->handle($request);
         }
